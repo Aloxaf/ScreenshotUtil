@@ -3,8 +3,9 @@
 
 import os
 import tesserocr
-from PIL import Image
+from PIL import Image, ImageOps
 from pyzbar.pyzbar import decode
+from subprocess import Popen
 from sys import argv, stderr
 from tempfile import mktemp
 
@@ -16,8 +17,9 @@ def thresholding(img, threshold):
     """
     data = img.getdata()
     new_data = [(0 if i <= threshold else 255) for i in data]
-    img.putdata(new_data)
-    return img
+    new_img = img.copy()
+    new_img.putdata(new_data)
+    return new_img
 
 
 def denoise(img, threshold=200):
@@ -34,12 +36,13 @@ def showtext(text):
     :param text: 将要输出的文字
     """
     # TODO: 这种调整窗口大小的方式太蠢了
-    size = [len(i.encode('GBK')) for i in text.split('\n')]
+    # TODO: 万一不是中文?
+    size = [len(i.encode('GBK', errors='ignore')) for i in text.split('\n')]
     width = min(0 + max(size) * 10, 800)
     height = min(0 + len(size) * 10, 800)
 
-    os.system(f'zenity --info --text="{text}" --title="结果" '
-              f'--width={width} --height={height}')
+    Popen(['zenity', '--info', f'--text={text}', f'--title="结果"',
+          f'--width={width}', f'--height={height}'], close_fds=True)
 
 
 def recognize(file):
@@ -50,7 +53,7 @@ def recognize(file):
     data = decode(img)
 
     if len(data) == 0:
-        img =  denoise(img)
+        img = denoise(img)
         data = decode(img)
 
     if len(data):
@@ -66,11 +69,15 @@ def ocr(file, lang='eng'):
     :param file: 二维码图片路径
     :param lang: 语言, 默认英语
     """
-    img = denoise(Image.open(file).convert('L'))
+    img = Image.open(file).convert('L')
     with tesserocr.PyTessBaseAPI(psm=tesserocr.PSM.SPARSE_TEXT_OSD,
                                  lang=lang) as api:
-        api.SetImage(img)
+        api.SetImage(denoise(img))
         text = api.GetUTF8Text().strip()
+
+        if text == '':
+            api.SetImage(ImageOps.invert(denoise(img, 100)))
+            text = api.GetUTF8Text().strip()
 
     if text == '':
         text = 'No Text Found!'
@@ -88,6 +95,9 @@ if __name__ == '__main__':
 
     temp = mktemp()
     os.system(f'gnome-screenshot -a -f {temp}.png')
+
+    if not os.path.exists(f'{temp}.png'):
+        exit()
 
     if argv[1].lower() == 'decode':
         recognize(f'{temp}.png')
