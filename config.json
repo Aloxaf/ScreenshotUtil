@@ -2,5 +2,5 @@
     "screenshot": "gnome-screenshot -a -f {temp}.png",
 
     "you can use {width} and {height} if your dialog applicaition can't adjust size automatically": "",
-    "dialog": ["yad", "--text-info", "--text={text}", "--title=Result", "--selectable-labels", "--fixed"]
+    "dialog": ["yad", "--center", "--text-info", "--text={text}", "--title=Result", "--selectable-labels", "--fixed"]
 }
