@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
 import os
 import tesserocr
 from PIL import Image, ImageOps
@@ -41,8 +42,8 @@ def showtext(text):
     width = min(0 + max(size) * 10, 800)
     height = min(0 + len(size) * 10, 800)
 
-    Popen(['zenity', '--info', f'--text={text}', f'--title="结果"',
-          f'--width={width}', f'--height={height}'], close_fds=True)
+    cmd = (lambda vs: [x.format(**vs) for x in config['dialog']])(vars())
+    Popen(cmd, close_fds=True)
 
 
 def recognize(file):
@@ -59,7 +60,7 @@ def recognize(file):
     if len(data):
         text = '\n'.join(f'{i.type}\t{i.data}' for i in data)
     else:
-        text = 'No QRCode Found!'
+        text = 'Nothing Found!'
 
     showtext(text)
 
@@ -70,8 +71,7 @@ def ocr(file, lang='eng'):
     :param lang: 语言, 默认英语
     """
     img = Image.open(file).convert('L')
-    with tesserocr.PyTessBaseAPI(psm=tesserocr.PSM.SPARSE_TEXT_OSD,
-                                 lang=lang) as api:
+    with tesserocr.PyTessBaseAPI(lang=lang) as api:
         api.SetImage(denoise(img))
         text = api.GetUTF8Text().strip()
 
@@ -86,20 +86,23 @@ def ocr(file, lang='eng'):
 
 
 if __name__ == '__main__':
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    config = json.load(open(os.path.join(dir_path, 'config.json')))
+
     if len(argv) == 1 or argv[1] in ['-h', '--help']:
         print('Usage: python ScreenshotUtil.py (ocr [lang])|decode')
         exit()
-    elif argv[1].lower() not in ['decode', 'ocr']:
+    elif argv[1] not in ['decode', 'ocr']:
         stderr.write(f'no command called {argv[1]}\n')
         exit()
 
     temp = mktemp()
-    os.system(f'gnome-screenshot -a -f {temp}.png')
+    os.system(config['screenshot'].format(**locals()))
 
     if not os.path.exists(f'{temp}.png'):
         exit()
 
-    if argv[1].lower() == 'decode':
+    if argv[1] == 'decode':
         recognize(f'{temp}.png')
-    elif argv[1].lower() == 'ocr':
+    elif argv[1] == 'ocr':
         ocr(f'{temp}.png', argv[2] if len(argv) == 3 else 'eng')
