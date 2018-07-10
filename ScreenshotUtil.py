@@ -3,12 +3,12 @@
 
 import json
 import os
-import tesserocr
-from PIL import Image, ImageOps
-from pyzbar.pyzbar import decode
+from tempfile import mktemp
 from subprocess import Popen
 from sys import argv, stderr
-from tempfile import mktemp
+from PIL import Image, ImageOps
+from pyzbar.pyzbar import decode
+import tesserocr
 
 
 def thresholding(img, threshold):
@@ -42,7 +42,7 @@ def showtext(text):
     width = min(0 + max(size) * 10, 800)
     height = min(0 + len(size) * 10, 800)
 
-    cmd = (lambda vs: [x.format(**vs) for x in config['dialog']])(vars())
+    cmd = (lambda vs: [x.format(**vs) for x in CONFIG['dialog']])(vars())
     Popen(cmd, close_fds=True)
 
 
@@ -53,11 +53,11 @@ def recognize(file):
     img = Image.open(file).convert('L')
     data = decode(img)
 
-    if len(data) == 0:
+    if data:
         img = denoise(img)
         data = decode(img)
 
-    if len(data):
+    if data:
         text = '\n'.join(f'{i.type}\t{i.data}' for i in data)
     else:
         text = 'Nothing Found!'
@@ -86,8 +86,8 @@ def ocr(file, lang='eng'):
 
 
 if __name__ == '__main__':
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    config = json.load(open(os.path.join(dir_path, 'config.json')))
+    DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+    CONFIG = json.load(open(os.path.join(DIR_PATH, 'config.json')))
 
     if len(argv) == 1 or argv[1] in ['-h', '--help']:
         print('Usage: python ScreenshotUtil.py (ocr [lang])|decode')
@@ -96,13 +96,13 @@ if __name__ == '__main__':
         stderr.write(f'no command called {argv[1]}\n')
         exit()
 
-    temp = mktemp()
-    os.system(config['screenshot'].format(**locals()))
+    TEMP = mktemp()
+    os.system(CONFIG['screenshot'].format(**locals()))
 
-    if not os.path.exists(f'{temp}.png'):
+    if not os.path.exists(f'{TEMP}.png'):
         exit()
 
     if argv[1] == 'decode':
-        recognize(f'{temp}.png')
+        recognize(f'{TEMP}.png')
     elif argv[1] == 'ocr':
-        ocr(f'{temp}.png', argv[2] if len(argv) == 3 else 'eng')
+        ocr(f'{TEMP}.png', argv[2] if len(argv) == 3 else 'eng')
