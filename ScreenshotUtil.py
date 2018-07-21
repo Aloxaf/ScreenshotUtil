@@ -7,7 +7,7 @@ from tempfile import mktemp
 from subprocess import Popen
 from sys import argv, stderr
 from PIL import Image, ImageOps
-from pyzbar.pyzbar import decode
+import zxing
 import tesserocr
 
 
@@ -50,15 +50,16 @@ def recognize(file):
     """识别二维码
     :param file: 二维码图片路径
     """
-    img = Image.open(file).convert('L')
-    data = decode(img)
+    reader = zxing.BarCodeReader()
+    data = reader.decode(file, possible_formats=['QR_CODE'])
+
+    if not data:
+        img = denoise(Image.open(file).convert('L'))
+        img.save(file)
+        data = reader.decode(file, possible_formats=['QR_CODE'])
 
     if data:
-        img = denoise(img)
-        data = decode(img)
-
-    if data:
-        text = '\n'.join(f'{i.type}\t{i.data}' for i in data)
+        text = data.raw
     else:
         text = 'Nothing Found!'
 

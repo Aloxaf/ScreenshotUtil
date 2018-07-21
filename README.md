@@ -1,5 +1,5 @@
 # ScreenshotUtil
-Take a screen shot and recognize the text or scan the qrcode/barcode.  
+Take a screen shot and recognize the text or scan the qrcode.  
 
 # Right Usage
 Add a shortcut for it!  
@@ -11,7 +11,7 @@ NOTE: Please edit config.json if you are not Gnome user.
 ## Python
 + Python 3.6+
  + Pillow
- + pyzbar
+ + zxing
  + tesserocr
 
 ## Shell
